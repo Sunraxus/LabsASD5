@@ -12,7 +12,7 @@ namespace HT {
 			int _key;
 			T _value;
 			bool del;
-			Node() : _key(0), del(true) {}
+			Node() : _key(0), _value(T()), del(true) {} 
 			Node(int key, const T& value) : _key(key), _value(value), del(false) {}
 		};
 
@@ -27,7 +27,7 @@ namespace HT {
 		void resize(int newSize);
 
 	public:
-		HashTable(int initialSize = 10);
+		HashTable(int Initialization = 10);
 
 		HashTable(const HashTable& other);
 
@@ -46,6 +46,14 @@ namespace HT {
 			return *this;
 		}
 
+		int get_size() const {
+			return _size;
+		}
+
+		int get_capacity() const {
+			return _capacity;
+		}
+
 		void print() const;
 
 		void insert(int key, const T& value);
@@ -59,16 +67,24 @@ namespace HT {
 		bool erase(int key);
 
 		int count(int key) const;
+
+		int calculateHash(int key) const {
+			return hash(key);
+		}
+
+		int findKeyPosition(int key) const {
+			return findPosition(key);
+		}
 	};
 
 	template<typename T>
 	inline int HashTable<T>::hash(int key) const {
-		const double A = 0.6180339887; 
-
-		double fractionalPart = A * key - int(A * key);
-		return int(_capacity * fractionalPart);
+		const double A = 0.6180339887;
+		double fractionalPart = key * A - static_cast<int>(key * A);
+		int res = _capacity * fractionalPart;
+		return res;
 	}
-
+	
 	template<typename T>
 	inline int HashTable<T>::findPosition(int key) const {
 		int hashValue = hash(key);
@@ -90,8 +106,15 @@ namespace HT {
 
 	template<typename T>
 	inline void HashTable<T>::resize(int newSize) {
+		if (newSize < 10) {
+			newSize = 10; // 
+		}
+
 		Node* newTable = new Node[newSize];
-		for (int i = 0; i < _capacity; ++i) {
+		int oldCapacity = _capacity; 
+		_capacity = newSize; 
+
+		for (int i = 0; i < oldCapacity; ++i) {
 			if (!table[i].del) {
 				int newPos = hash(table[i]._key) % newSize;
 				while (!newTable[newPos].del) {
@@ -100,13 +123,13 @@ namespace HT {
 				newTable[newPos] = table[i];
 			}
 		}
+
 		delete[] table;
 		table = newTable;
-		_capacity = newSize;
 	}
 
 	template<typename T>
-	inline HashTable<T>::HashTable(int initialSize) : _size(0), _capacity(initialSize) {
+	inline HashTable<T>::HashTable(int Initialization) : _size(0), _capacity(Initialization) {
 		table = new Node[_capacity];
 	}
 
@@ -134,18 +157,22 @@ namespace HT {
 
 	template<typename T>
 	inline void HashTable<T>::insert(int key, const T& value) {
-		if ((double)_size / _capacity >= 0.7) {
+		if ((double)_size / _capacity >= 0.75) {
 			resize(2 * _capacity);
 		}
-		int pos = hash(key) % _capacity;
-		while (!table[pos].del && table[pos]._key != key) {
-			pos = (pos + 1) % _capacity;
+
+		int pos = findPosition(key);
+		if (pos == -1 || table[pos].del) {
+			pos = hash(key) % _capacity;
+			while (!table[pos].del && table[pos]._key != key) {
+				pos = (pos + 1) % _capacity;
+			}
+			if (table[pos].del) {
+				++_size;
+			}
+			table[pos] = Node(key, value);
+			table[pos].del = false;
 		}
-		if (table[pos].del) {
-			++_size;
-		}
-		table[pos] = Node(key, value);
-		table[pos].del = false;
 	}
 
 	template<typename T>
@@ -153,21 +180,22 @@ namespace HT {
 		if ((double)_size / _capacity >= 0.7) {
 			resize(2 * _capacity);
 		}
-		int pos = hash(key) % _capacity;
-		int initialPos = pos;
-		do {
-			if (table[pos]._key == key && !table[pos].del) {
-				table[pos]._value = value;
-				return;
-			}
-			pos = (pos + 1) % _capacity;
-		} while (pos != initialPos && !table[pos].del);
 
-		if (table[pos].del) {
-			++_size;
+		int pos = findPosition(key);
+		if (pos != -1 && !table[pos].del) {
+			table[pos]._value = value;
 		}
-		table[pos] = Node(key, value);
-		table[pos].del = false;
+		else {
+			pos = hash(key) % _capacity;
+			while (!table[pos].del && table[pos]._key != key) {
+				pos = (pos + 1) % _capacity;
+			}
+			if (table[pos].del) {
+				++_size;
+			}
+			table[pos] = Node(key, value);
+			table[pos].del = false;
+		}
 	}
 
 	template<typename T>
@@ -192,7 +220,7 @@ namespace HT {
 	template<typename T>
 	inline bool HashTable<T>::erase(int key) {
 		int pos = findPosition(key);
-		if (pos != -1) {
+		if (pos != -1 && !table[pos].del) {
 			table[pos].del = true;
 			--_size;
 			if ((double)_size / _capacity < 0.3 && _capacity > 10) {
@@ -205,14 +233,20 @@ namespace HT {
 
 	template<typename T>
 	inline int HashTable<T>::count(int key) const {
-		int _count = 0;
-		int pos = hash(key) % _capacity;
-		while (!table[pos].del && (table[pos]._key != key || table[pos].del)) {
-			if (table[pos]._key == key) {
-				++_count;
+		int collisionCount = 0;
+		int hashValue = hash(key);
+		int initialPos = hashValue % _capacity;
+		int pos = initialPos;
+
+		do {
+			if (!table[pos].del && table[pos]._key != key && hash(table[pos]._key) == hashValue) {
+				++collisionCount;
 			}
 			pos = (pos + 1) % _capacity;
-		}
-		return _count;
+		} while (pos != initialPos);
+
+		return collisionCount;
 	}
 }
+
+
