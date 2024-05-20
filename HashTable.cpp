@@ -76,11 +76,12 @@ void test() {
     cout << "Размер таблицы (максимальный)  " << hashTable.get_capacity() << endl;
     cout << "Реальный размер таблицы " << hashTable.get_size() << endl;
     hashTable.print();
+    cout << "----------------------------------------" << endl;
 }
 
 int main() {
     setlocale(LC_ALL, "Russian");
-    //test();
+    test();
     srand(time(0)); 
 
     const int numElements = 22; 

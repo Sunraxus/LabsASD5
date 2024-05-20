@@ -95,9 +95,6 @@ namespace HT {
 			if (table[pos]._key == key && !table[pos].del) {
 				return pos;
 			}
-			if (table[pos].del) {
-				break;
-			}
 			pos = (pos + 1) % _capacity;
 		} while (pos != initialPos);
 
@@ -107,7 +104,7 @@ namespace HT {
 	template<typename T>
 	inline void HashTable<T>::resize(int newSize) {
 		if (newSize < 10) {
-			newSize = 10; // 
+			newSize = 10; 
 		}
 
 		Node* newTable = new Node[newSize];
@@ -157,7 +154,7 @@ namespace HT {
 
 	template<typename T>
 	inline void HashTable<T>::insert(int key, const T& value) {
-		if ((double)_size / _capacity >= 0.75) {
+		if ((double)_size / _capacity >= 0.7) {
 			resize(2 * _capacity);
 		}
 
@@ -248,5 +245,3 @@ namespace HT {
 		return collisionCount;
 	}
 }
-
-
